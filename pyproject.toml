@@ -1,0 +1,43 @@
+[tool.poetry]
+name = "crystal-tts"
+version = "0.1.0"
+description = "Ushering in a new era of high-quality, neural text-to-speech voices for use with assistive technologies"
+authors = ["mush42 <musharraf.omer@gmail.com>"]
+license = "GNU GENERAL PUBLIC LICENSE"
+readme = "README.md"
+packages = [{include = "crystal_tts"}]
+repository = "https://github.com/blindpandas/crystal-tts"
+keywords = ["tts", "a11y", "reader", "nlp"]
+classifiers = [
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Linguistic",
+    "Development Status :: 5 - Production/Stable",
+    "Operating System :: Microsoft :: Windows"
+]
+
+[tool.poetry.dependencies]
+python = "~3.10"
+invoke=  "^2.0.0"
+dataclasses-json = "^0.5.7"
+epitran = "^1.24" 
+espeak-phonemizer = { version = "^1.0.1", markers = "sys_platform == 'linux'" }
+espeak-phonemizer-windows = { version = "^1.0.1", markers = "sys_platform == 'win32'" }
+gruut = "^2.3.4"
+numpy = "^1.24.2"
+onnxruntime = "^1.14.0"
+phonemes2ids = "^1.2.2"
+requests = "^2.28.2"
+tqdm = "^4.64.1"
+xdgenvpy = "^2.3.5"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "23.1.0"
+isort = "^5.12.0"
+PyInstaller = "^5.8.0"
+pytest = "^7.2.1"
+wheel = "^0.38.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
