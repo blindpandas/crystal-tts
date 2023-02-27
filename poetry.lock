@@ -898,6 +898,28 @@ protobuf = "*"
 sympy = "*"
 
 [[package]]
+name = "onnxruntime-directml"
+version = "1.14.0"
+description = "ONNX Runtime is a runtime accelerator for Machine Learning models"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "onnxruntime_directml-1.14.0-cp310-cp310-win_amd64.whl", hash = "sha256:a197b579589a21bbce19aa8d39c3cecd65fd4ef12d532432441bbc6909eba70d"},
+    {file = "onnxruntime_directml-1.14.0-cp37-cp37m-win_amd64.whl", hash = "sha256:c77467a870348e4bd4a72784c02285ac57cc2e9f8e9d38d51932b89f69e1c916"},
+    {file = "onnxruntime_directml-1.14.0-cp38-cp38-win_amd64.whl", hash = "sha256:d6b58dfaa70f81b8757c644a3f4f9377fd6d85ecdfea06614f5b038e6d0c226d"},
+    {file = "onnxruntime_directml-1.14.0-cp39-cp39-win_amd64.whl", hash = "sha256:ec236c30a047f7780ed71f8d20d2b2b94410c7892d2d6a6d55486b16a779f15a"},
+]
+
+[package.dependencies]
+coloredlogs = "*"
+flatbuffers = "*"
+numpy = ">=1.21.6"
+packaging = "*"
+protobuf = "*"
+sympy = "*"
+
+[[package]]
 name = "packaging"
 version = "23.0"
 description = "Core utilities for Python packages"
@@ -1572,4 +1594,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "f81e12c18b1ce59820f5228b4b840983c117b9ad197e680147e642e7933d86c4"
+content-hash = "632d7d22c43b8028f838763e2b122ba799d742f0c51273156124bd10ea939ecc"

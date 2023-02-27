@@ -1,19 +1,7 @@
-# Copyright 2022 Mycroft AI Inc.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-"""Implementation of OpenTTS for Mimic 3"""
+# coding: utf-8
+
+"""Implementation of OpenTTS for Crystal TTS"""
+
 import audioop
 import itertools
 import logging
@@ -24,8 +12,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from gruut_ipa import IPA
-from xdgenvpy import XDG
-
 from opentts_abc import (
     AudioResult,
     BaseResult,
@@ -38,24 +24,18 @@ from opentts_abc import (
     Word,
 )
 
-from ._resources import _VOICES
-from .config import TrainingConfig
-from .const import (
-    DEFAULT_LANGUAGE,
-    DEFAULT_RATE,
-    DEFAULT_VOICE,
-    DEFAULT_VOICES_DOWNLOAD_DIR,
-    DEFAULT_VOICES_URL_FORMAT,
-    DEFAULT_VOLUME,
-)
-from .download import VoiceFile, download_voice
-from .utils import WILDCARD, wildcard_to_regex
+from .model_config import TrainingConfig
 from .voice import SPEAKER_TYPE, BreakType, Mimic3Voice
+from .utils import wildcard_to_regex
 
-_DIR = Path(__file__).parent
 
 _LOGGER = logging.getLogger(__name__)
 
+DEFAULT_VOICE = "apope"
+DEFAULT_LANGUAGE = 'en-us'
+DEFAULT_RATE = 1.0
+DEFAULT_VOLUME = 1.0
+WILDCARD = '*'
 PHONEMES_LIST_TYPE = typing.List[typing.List[str]]
 
 
@@ -64,7 +44,7 @@ PHONEMES_LIST_TYPE = typing.List[typing.List[str]]
 
 @dataclass
 class Mimic3Settings:
-    """Settings for Mimic 3 text to speech system"""
+    """Settings for Crystal text to speech system"""
 
     voice: typing.Optional[str] = None
     """Default voice key"""
@@ -74,15 +54,6 @@ class Mimic3Settings:
 
     voices_directories: typing.Optional[typing.Iterable[typing.Union[str, Path]]] = None
     """Directories to search for voices (<lang>/<voice>)"""
-
-    voices_url_format: typing.Optional[str] = DEFAULT_VOICES_URL_FORMAT
-    """URL format string for a voice directory.
-
-    May contain:
-      * {key} - unique voice key
-      * {lang} - voice language
-      * {name} - voice name
-    """
 
     speaker: typing.Optional[SPEAKER_TYPE] = None
     """Default speaker name or id"""
@@ -102,15 +73,6 @@ class Mimic3Settings:
     sample_rate: int = 22050
     """Sample rate of silence from add_break() in Hertz"""
 
-    voices_download_dir: typing.Union[str, Path] = DEFAULT_VOICES_DOWNLOAD_DIR
-    """Directory to download voices to"""
-
-    no_download: bool = False
-    """Do not download voices automatically"""
-
-    use_cuda: bool = False
-    """Use CUDA GPU acceleration (requires onnxruntime-gpu)"""
-
     share_onnx_models_between_threads: bool = True
     """If True, Onnx models are shared between threads"""
 
@@ -122,6 +84,8 @@ class Mimic3Settings:
 
     use_deterministic_compute: bool = False
     """Force onnxruntime to use deterministic compute mode. For fully deterministic synthesis, also set noise_scale and noise_w to 0."""
+
+    use_cuda = False
 
 
 @dataclass
@@ -149,7 +113,7 @@ class VoiceNotFoundError(Exception):
 
 
 class Mimic3TextToSpeechSystem(TextToSpeechSystem):
-    """Convert text to speech using Mimic 3"""
+    """Convert text to speech"""
 
     def __init__(self, settings: Mimic3Settings):
         self.settings = settings
@@ -160,16 +124,8 @@ class Mimic3TextToSpeechSystem(TextToSpeechSystem):
     @staticmethod
     def get_default_voices_directories() -> typing.List[Path]:
         """Get list of directories to search for voices by default.
-
-        On Linux, this is typically:
-            - $HOME/.local/share/mycroft/mimic3/voices
-            - /usr/local/share/mycroft/mimic3/voices
-            - /usr/share/mycroft/mimic3/voices
         """
-        return [
-            Path(d) / "mycroft" / "mimic3" / "voices"
-            for d in XDG().XDG_DATA_DIRS.split(":")
-        ]
+        return []
 
     def get_voices(self) -> typing.Iterable[Voice]:
         """Returns an iterable of all available voices"""
@@ -179,8 +135,6 @@ class Mimic3TextToSpeechSystem(TextToSpeechSystem):
 
         if self.settings.voices_directories is not None:
             voices_dirs = itertools.chain(self.settings.voices_directories, voices_dirs)
-
-        known_voices = set(_VOICES.keys())
 
         # voices/<language>/<voice>/
         for voices_dir in voices_dirs:
@@ -257,31 +211,8 @@ class Mimic3TextToSpeechSystem(TextToSpeechSystem):
                         location=str(voice_dir.absolute()),
                         properties=properties,
                         aliases=aliases,
+                        version=voice_dir.joinpath("VERSION").read_text().strip()
                     )
-
-                    known_voices.discard(voice_key)
-
-        # Yield voices that haven't yet been downloaded
-        for voice_key in known_voices:
-            voice_lang, voice_name = voice_key.split("/", maxsplit=1)
-            voice_info = _VOICES.get(voice_key, {})
-            speakers = voice_info.get("speakers", [])
-            properties = voice_info.get("properties", {})
-
-            yield Voice(
-                key=voice_key,
-                name=voice_name,
-                language=voice_lang,
-                description="",
-                speakers=speakers,
-                location=str.format(
-                    self.settings.voices_url_format or DEFAULT_VOICES_URL_FORMAT,
-                    lang=voice_lang,
-                    name=voice_name,
-                    key=voice_key,
-                ),
-                properties=properties,
-            )
 
     def preload_voice(self, voice_key: str):
         """Ensure voice(s) are loaded in memory before synthesis.
@@ -563,11 +494,6 @@ class Mimic3TextToSpeechSystem(TextToSpeechSystem):
                 maybe_voice.aliases and (voice_key in maybe_voice.aliases)
             ):
                 maybe_model_dir = Path(maybe_voice.location)
-
-                if (not maybe_model_dir.is_dir()) and (not self.settings.no_download):
-                    # Download voice
-                    maybe_model_dir = self._download_voice(voice_key)
-
                 if maybe_model_dir.is_dir():
                     # Voice found
                     model_dir = maybe_model_dir
@@ -607,25 +533,3 @@ class Mimic3TextToSpeechSystem(TextToSpeechSystem):
 
         return voice
 
-    def _download_voice(self, voice_key: str) -> Path:
-        """Downloads a voice by key"""
-        voice_lang, voice_name = voice_key.split("/", maxsplit=1)
-        voice_info = _VOICES[voice_key]
-        voice_url = str.format(
-            self.settings.voices_url_format or DEFAULT_VOICES_URL_FORMAT,
-            key=voice_key,
-            lang=voice_lang,
-            name=voice_name,
-        )
-        voice_files = voice_info["files"]
-        download_voice(
-            voice_key=voice_key,
-            url_base=voice_url,
-            voice_files=[VoiceFile(file_key) for file_key in voice_files.keys()],
-            voice_version=voice_info["version"],
-            voices_dir=self.settings.voices_download_dir,
-        )
-
-        voice_dir = Path(self.settings.voices_download_dir) / voice_key
-
-        return voice_dir
