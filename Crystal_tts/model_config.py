@@ -195,6 +195,7 @@ class Phonemizer(str, Enum):
     """Method used to convert text to phonemes"""
 
     SYMBOLS = "symbols"
+    LARYNX2 = "larynx2"
     GRUUT = "gruut"
     ESPEAK = "espeak"
     EPITRAN = "epitran"

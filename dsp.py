@@ -1,12 +1,9 @@
 # coding: utf-8
 
 from pathlib import Path
-from crystal_tts import Mimic3Settings, Mimic3TextToSpeechSystem, SSMLSpeaker, AudioResult
-import miniaudio
-import struct
-TEXT = """
-This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or at your option any later version.
-""".strip()
+from crystal_tts import Mimic3Settings
+from crystal_tts.speechplayer import CrystalSpeechPlayer
+
 
 SSML = """
 <speak>
@@ -37,39 +34,18 @@ On the other hand the regression results show significant positive association b
 </s>
 </speak>
 """
+
+
 CRYSTALTTS_DATA_PATH = Path.home().joinpath("crystal_tts", "voices")
 CRYSTALTTS_DATA_PATH.mkdir(exist_ok=True)
-
-
 tts_settings = Mimic3Settings(
     voice="",
     language="",
-    voices_directories=[CRYSTALTTS_DATA_PATH]
+    voices_directories=[CRYSTALTTS_DATA_PATH],
+    sample_rate=16000
 )
 
-tts = Mimic3TextToSpeechSystem(tts_settings)
-print(list(tts.get_voices()))
-tts.voice = "en_US/ryan_low"
 
-#res = tts.text_to_wav(TEXT)
-#with open("out.wav", "wb") as file:
-#file.write(res)
-
-
-speaker = SSMLSpeaker(tts)
-
-# NVwave
-import nvwave
-player = nvwave.WavePlayer(
-    channels=1,
-    samplesPerSec=16000,
-    bitsPerSample=16,
-    outputDevice=nvwave.getOutputDeviceNames()[1]
-)
-
-results = speaker.speak(SSML)
-
-for res in results:
-    if not isinstance(res, AudioResult):
-        continue
-    player.feed(res.audio_bytes)
+player = CrystalSpeechPlayer(tts_settings)
+#player.tts.voice = "en_US/ryan_low"
+player.speak_ssml(SSML)

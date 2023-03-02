@@ -514,9 +514,9 @@ class Mimic3TextToSpeechSystem(TextToSpeechSystem):
             return existing_voice
 
         # https://onnxruntime.ai/docs/execution-providers/
-        providers = None
+        providers = ["CPUExecutionProvider"]
         if self.settings.use_cuda:
-            providers = ["CUDAExecutionProvider"]
+            providers.insert(0, "CUDAExecutionProvider")
 
         voice = Mimic3Voice.load_from_directory(
             model_dir,

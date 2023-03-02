@@ -1,11 +1,14 @@
 # coding: utf-8
 
 import csv
+import itertools
 import logging
 import platform
 import threading
 import time
 import typing
+import unicodedata
+
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 from pathlib import Path
@@ -19,6 +22,7 @@ import onnxruntime
 import phonemes2ids
 from gruut_ipa import IPA
 
+from . import larynx2phonemize
 from .model_config import Phonemizer, TrainingConfig
 from .utils import audio_float_to_int16, to_codepoints
 
@@ -305,6 +309,15 @@ class Mimic3Voice(metaclass=ABCMeta):
                     for alias in row[2:]:
                         speaker_map[alias] = speaker_id
 
+        if config.phonemizer == Phonemizer.LARYNX2:
+            return Larynx2Voice(
+                config=config,
+                onnx_model=onnx_model,
+                phoneme_to_id=phoneme_to_id,
+                phoneme_map=phoneme_map,
+                speaker_map=speaker_map,
+            )
+
         if config.phonemizer == Phonemizer.GRUUT:
             # Phonemes from gruut: https://github.com/rhasspy/gruut/
             return GruutVoice(
@@ -388,7 +401,7 @@ class Mimic3Voice(metaclass=ABCMeta):
         onnx_model = onnxruntime.InferenceSession(
             str(generator_path),
             sess_options=session_options,
-            providers=providers or ["CPUExecutionProvider"]
+            providers=providers
         )
 
         return onnx_model
@@ -759,3 +772,21 @@ class EpitranVoice(Mimic3Voice):
         else:
             # No split
             yield all_word_phonemes, BreakType.UTTERANCE
+
+
+class Larynx2Voice(EspeakVoice):
+
+
+    def phonemes_to_ids(
+        self, phonemes: WORD_PHONEMES_TYPE
+    ) -> typing.Sequence[PHONEME_ID_TYPE]:
+        """Convert phonemes to ids for a voice model (see phonemes.txt)"""
+        ph_text = "".join(
+            "".join(p)
+            for p in phonemes
+        )
+        return larynx2phonemize.phonemes_to_ids(ph_text)
+
+    @staticmethod
+    def _to_unicode_code_points(s):
+        return list(unicodedata.normalize("NFC", s))
